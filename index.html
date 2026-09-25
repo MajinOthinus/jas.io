@@ -1,0 +1,316 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Jensen Appraisal Suite</title><link rel="stylesheet" href="css/main.css"></head><body><main class="container">
+<header class="page-header">
+  <h1>Jensen Appraisal Suite</h1>
+  <p>Load an MLS dataset once, then use it across the analysis tools.</p>
+</header>
+
+<section id="analysis" class="upload-card dataset-card">
+  <div id="drop" class="drop">
+    <input id="file" type="file" accept=".csv,text/csv" hidden>
+    <div class="drop-title">Drop MLS CSV here</div>
+    <div class="drop-subtitle">or click to choose a CSV file</div>
+  </div>
+  <div id="status" class="status" style="margin-top:12px"></div>
+  <div id="datasetSummary" style="display:none; margin-top:18px">
+    <div class="stats">
+      <div class="stat-card"><div class="stat-label">TOTAL RECORDS</div><div id="records" class="stat-value">—</div></div>
+      <div class="stat-card"><div class="stat-label">CLOSED SALES</div><div id="valid" class="stat-value">—</div></div>
+      <div class="stat-card"><div class="stat-label">ACTIVE / PENDING</div><div id="activePending" class="stat-value">—</div></div>
+      <div class="stat-card"><div class="stat-label">CLOSE DATE RANGE</div><div id="range" class="stat-value">—</div></div>
+    </div>
+  </div>
+</section>
+
+<nav id="analysisNav" class="analysis-nav" aria-label="Analysis sections">
+  <button type="button" class="analysis-nav-btn active" data-page="marketPage">Market Analysis</button>
+  <button type="button" class="analysis-nav-btn" data-page="glaPage">GLA Analysis</button>
+  <button type="button" class="analysis-nav-btn" data-page="siteValuePage">Site Value</button>
+</nav>
+
+<section id="marketPage" class="analysis-page">
+
+
+    <section id="appraiserNotesSection" class="appraiser-notes-section" style="display:none; margin-top:18px">
+      <div class="appraiser-notes-card">
+        <label for="appraiserNotes" class="appraiser-notes-label">Appraiser Search Parameters &amp; Comments</label>
+        <textarea id="appraiserNotes" class="appraiser-notes-input" rows="4"
+          placeholder="Enter search parameters, MLS criteria, market-area notes, or other comments..."></textarea>
+      </div>
+    </section>
+
+    <section id="exportSection" class="export-section" style="display:none; margin-top:14px">
+      <div class="export-card">
+        <div class="export-title">Export</div>
+        <div class="export-buttons">
+          <button type="button" id="exportGraphImage" class="export-btn">Graph Image (PNG)</button>
+          <button type="button" id="exportGraphPdf" class="export-btn">Graph PDF</button>
+          <button type="button" id="exportReportPdf" class="export-btn export-primary">Full Report PDF</button>
+        </div>
+      </div>
+    </section>
+
+    
+<section id="yAxisSection" class="y-axis-section" style="display:none">
+  <div class="y-axis-card">
+    <div class="y-axis-heading">
+      <div>
+        <div class="y-axis-title">Sale Price Analysis Range</div>
+        <div class="y-axis-help">Adjust the sale-price range to include or exclude outliers from the graph and trend calculations.</div>
+      </div>
+      <div id="analysisCount" class="analysis-count">All sales</div>
+    </div>
+    <div class="y-axis-grid">
+      <div>
+        <div class="range-label"><span>Minimum</span><strong id="yMinValue">$0</strong></div>
+        <input id="yMinSlider" type="range">
+      </div>
+      <div>
+        <div class="range-label"><span>Maximum</span><strong id="yMaxValue">$0</strong></div>
+        <input id="yMaxSlider" type="range">
+      </div>
+      <button id="yAxisReset" type="button" class="y-axis-reset">Show All Sales</button>
+    </div>
+  </div>
+</section>
+
+<section id="graphYAxisSection" class="y-axis-section" style="display:none">
+  <div class="y-axis-card">
+    <div class="y-axis-heading">
+      <div>
+        <div class="y-axis-title">Graph Display Range</div>
+        <div class="y-axis-help">Constrict the visible Y-axis without removing sales or changing any analysis or trend calculations.</div>
+      </div>
+    </div>
+    <div class="y-axis-grid">
+      <div>
+        <div class="range-label"><span>Minimum</span><strong id="graphYMinValue">$0</strong></div>
+        <input id="graphYMinSlider" type="range">
+      </div>
+      <div>
+        <div class="range-label"><span>Maximum</span><strong id="graphYMaxValue">$0</strong></div>
+        <input id="graphYMaxSlider" type="range">
+      </div>
+      <button id="graphYAxisReset" type="button" class="y-axis-reset">Show Full Range</button>
+    </div>
+  </div>
+</section>
+
+<div id="chartSection" style="display:none; margin-top:26px">
+      <div class="analysis-grid">
+        <div class="chart-panel">
+          <div class="chart-legend">
+            <span><span class="legend-swatch-point"></span>Individual Closings</span>
+            <span><span class="legend-swatch-line"></span>Rolling median trend <span style="opacity:.72">(dashed while building)</span></span><span><span class="legend-swatch-linear"></span>Linear trend</span><span><span class="legend-swatch-trend"></span>Non-linear trend</span><span><span class="legend-swatch-noise"></span>Noise boundary</span>
+          </div>
+          <div id="chartWrap" style="position:relative; width:100%; overflow:hidden;">
+            <svg id="chart" viewBox="0 0 1000 500" width="100%" role="img"
+                 aria-label="Closed sale prices and rolling median by close date"></svg>
+            <div id="tooltip" style="display:none;position:absolute;pointer-events:none;padding:8px 10px;border:1px solid #52627d;border-radius:7px;background:#121b25;color:#e8edf5;box-shadow:0 2px 12px rgba(0,0,0,.35);font-size:13px;z-index:5;"></div>
+          </div>
+        </div>
+
+        <div class="controls-panel">
+          <h2 style="margin-bottom:18px">Rolling Median</h2>
+          <div id="windowButtons" style="display:flex;gap:8px;flex-wrap:nowrap">
+            <button type="button" class="windowBtn" data-window="10">10 Sales</button>
+            <button type="button" class="windowBtn" data-window="20">20 Sales</button>
+            <button type="button" class="windowBtn" data-window="30">30 Sales</button>
+          </div>
+
+          <div style="margin-top:18px">
+            <div style="font-weight:700;color:#aeb8ff;margin-bottom:8px">Rolling Median Display</div>
+            <div id="medianButtons" style="display:flex;gap:8px;flex-wrap:nowrap">
+              <button type="button" class="medianBtn active" data-median="on">Show</button>
+              <button type="button" class="medianBtn" data-median="off">Hide</button>
+            </div>
+          </div>
+
+          <div style="height:1px;background:#29384c;margin:24px 0"></div>
+
+          <h2 style="margin-bottom:18px">Trend lines</h2>
+          <div id="trendButtons" style="display:flex;gap:8px;flex-wrap:nowrap">
+            <button type="button" class="trendToggle" data-trend="linear">Linear</button>
+            <button type="button" class="trendToggle active" data-trend="quadratic">Non-linear</button>
+          </div>
+
+          <div style="height:1px;background:#29384c;margin:24px 0"></div>
+
+          <h2 style="margin-bottom:18px">Transactional Noise</h2>
+          <div id="noiseButtons" style="display:flex;gap:8px;flex-wrap:nowrap">
+            <button type="button" class="noiseBtn" data-noise="65">65%</button>
+            <button type="button" class="noiseBtn" data-noise="70">70%</button>
+            <button type="button" class="noiseBtn" data-noise="75">75%</button>
+          </div>
+          <div class="noiseSummary" style="margin-top:12px">
+            <div class="noiseSummaryLabel">CLOSED SALES WITHIN CHANNEL</div>
+            <div id="noiseInChannel" class="noiseSummaryValue">—</div>
+          </div>
+
+          <div id="calcStatus" class="status" style="margin-top:18px"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <section id="compSection" class="comp-section" style="display:none">
+      <div class="comp-header">
+        <div>
+          <h2>Comparable Sales &amp; Time Adjustments</h2>
+          <div class="comp-subtitle">Enter each comparable's contract date and sale price. The analyzer will match the comp to a closed sale in the uploaded MLS data and calculate the time adjustment to the effective date.</div>
+        </div>
+      </div>
+
+      <div class="comp-controls">
+        <div class="comp-control">
+          <label for="compCount">Number of comps</label>
+          <select id="compCount">
+            <option value="6">6 comps</option>
+            <option value="7">7 comps</option>
+            <option value="8">8 comps</option>
+            <option value="9">9 comps</option>
+            <option value="10">10 comps</option>
+            <option value="11">11 comps</option>
+            <option value="12">12 comps</option>
+          </select>
+        </div>
+        <div class="comp-control">
+          <label for="effectiveDate">Effective date</label>
+          <div class="comp-date-wrap"><input id="effectiveDate" class="effective-date" type="text" readonly placeholder="Select date"></div>
+        </div>
+        <div class="effective-box">
+          <div class="noiseSummaryLabel">EFFECTIVE DATE ROLLING MEDIAN</div>
+          <div id="effectiveMedian" class="effective-value">—</div>
+        </div>
+      </div>
+
+      <div class="comp-quick-add">
+        <button type="button" id="selectCompMode" class="select-comp-btn">Select sale from graph</button>
+      </div>
+
+      <div id="compRows" class="comp-rows"></div>
+      <div id="compStatus" class="comp-status" aria-live="polite"></div>
+      <div id="graphSelectStatus" class="graph-select-status" aria-live="polite"></div>
+    </section>
+
+    <section id="mcSection" class="mc-section" style="display:none">
+      <div class="mc-header">
+        <h2>Market Conditions — 3-Month Intervals</h2>
+        <div class="mc-subtitle">
+          1004MC-style market conditions analysis using consecutive 3-month periods.
+          The table expands automatically to match the available closed-sale history.
+        </div>
+      </div>
+
+      <div class="mc-table-wrap mc-table-wrap-first">
+        <table class="mc-table">
+          <thead id="mcHead1"></thead>
+          <tbody id="mcBody1"></tbody>
+        </table>
+      </div>
+
+      <div class="mc-table-wrap mc-table-wrap-second">
+        <table class="mc-table">
+          <thead id="mcHead2"></thead>
+          <tbody id="mcBody2"></tbody>
+        </table>
+      </div>
+      <div class="mc-note">
+        Absorption rate = closed sales ÷ 3 months. Months of housing supply =
+        active listings ÷ absorption rate. Median sale price as % of list price
+        is the median of each closed sale's sale-price/list-price percentage.
+      </div>
+    </section>
+
+    <section id="monthlyActivitySection" class="monthly-activity-section" style="display:none">
+      <div class="monthly-activity-panel">
+        <div class="mc-header">
+          <h2>Monthly Market Activity</h2>
+          <div class="mc-subtitle">Monthly closed-sale absorption and median days on market.</div>
+        </div>
+        <div class="monthly-activity-grid">
+          <div class="monthly-activity-card">
+          <div class="monthly-activity-card-head">
+            <h3>Monthly Absorption</h3>
+            <div class="monthly-trend-controls" data-chart="absorption">
+              <button type="button" class="monthly-trend-btn" data-trend="linear">Linear trend</button>
+              <button type="button" class="monthly-trend-btn" data-trend="quadratic">Non-linear trend</button>
+            </div>
+          </div>
+          <div class="monthly-chart-wrap"><svg id="monthlyAbsorptionChart" viewBox="0 0 900 360" role="img" aria-label="Monthly absorption"></svg></div>
+        </div>
+        <div class="monthly-activity-card">
+          <div class="monthly-activity-card-head">
+            <h3>Median DOM</h3>
+            <div class="monthly-trend-controls" data-chart="dom">
+              <button type="button" class="monthly-trend-btn" data-trend="linear">Linear trend</button>
+              <button type="button" class="monthly-trend-btn" data-trend="quadratic">Non-linear trend</button>
+            </div>
+          </div>
+          <div class="monthly-chart-wrap"><svg id="monthlyDomChart" viewBox="0 0 900 360" role="img" aria-label="Monthly median days on market"></svg></div>
+        </div>
+      </div>
+      </div>
+</section>
+  </section>
+</div>
+
+
+</section>
+<section id="glaPage" class="analysis-page" style="display:none">
+  <div class="gla-page">
+    <div class="section-box">
+      <div class="mc-header"><h2>GLA Data Overview</h2><div class="mc-subtitle">Summary statistics using MLS Living Main as GLA for the current closed-sale analysis population.</div></div>
+      <div class="gla-stat-grid">
+        <div class="gla-stat"><span>Sales</span><strong id="glaSaleCount">—</strong></div>
+        <div class="gla-stat"><span>GLA Range</span><strong id="glaRange">—</strong></div>
+        <div class="gla-stat"><span>Median GLA</span><strong id="glaMedian">—</strong></div>
+        <div class="gla-stat"><span>Mean GLA</span><strong id="glaMean">—</strong></div>
+        <div class="gla-stat"><span>Sale Price Range</span><strong id="glaPriceRange">—</strong></div>
+        <div class="gla-stat"><span>Median Sale Price</span><strong id="glaMedianPrice">—</strong></div>
+        <div class="gla-stat"><span>Median $/SF</span><strong id="glaMedianPpsf">—</strong></div>
+        <div class="gla-stat"><span>Mean $/SF</span><strong id="glaMeanPpsf">—</strong></div>
+      </div>
+    </div>
+
+    <div class="section-box">
+      <div class="mc-header"><h2>Ratterman Method</h2><div class="mc-subtitle">Manual site/value inputs and contributory GLA analysis.</div></div>
+      <div class="gla-input-grid">
+        <label>Site Value<input id="rSiteValue" type="number" min="0" step="1000" placeholder="$"></label>
+        <label>Indicated Property Value<input id="rIndicatedValue" type="number" min="0" step="1000" placeholder="$"></label>
+      </div>
+      <div class="ratterman-summary">
+        <div><span>Site / Value Ratio</span><strong id="rSiteRatio">—</strong></div>
+        <div><span>Improvement Contribution</span><strong id="rImprovement">—</strong></div>
+        <div><span>GLA Contribution Factor</span><strong id="rFactor">—</strong></div>
+      </div>
+      <div class="gla-status" id="rStatus">Enter Site Value and Indicated Property Value.</div>
+      <div class="ratterman-summary ratterman-results">
+        <div><span>Comparable Sales</span><strong id="rIndCount">—</strong></div>
+        <div><span>Indicated Range</span><strong id="rIndRange">—</strong></div>
+        <div><span>Mean Indication</span><strong id="rIndMean">—</strong></div>
+        <div><span>Median Indication</span><strong id="rIndMedian">—</strong></div>
+      </div>
+    </div>
+
+    <div class="section-box">
+      <div class="mc-header"><h2>Regression Analysis</h2><div class="mc-subtitle">Linear regression of sale price against GLA.</div></div>
+      <div class="reg-summary">
+        <div class="reg-primary"><span>Regression GLA Factor</span><strong id="regMarginal">—</strong><small>indicated $/SF adjustment</small></div>
+        <div><span>R²</span><strong id="regR2">—</strong></div>
+        <div><span>Sales</span><strong id="regN">—</strong></div>
+        <div><span>Equation</span><strong id="regEquation">—</strong></div>
+      </div>
+      <div class="gla-chart-wrap"><svg id="glaScatter" viewBox="0 0 900 420" aria-label="GLA versus sale price"></svg></div>
+    </div>
+
+    <div class="section-box">
+      <div class="mc-header"><h2>Sensitivity Analysis</h2><div class="mc-subtitle">Sensitivity framework will use the Ratterman factor and comparable $/SF indications.</div></div>
+      <div class="sensitivity-note">The initial page establishes the Ratterman calculation and its comp-level indications. We can build the interactive sensitivity table next, using the selected factor range and reconciliation approach.</div>
+    </div>
+  </div>
+</section>
+<section id="siteValuePage" class="analysis-page" style="display:none">
+  <div class="placeholder-card"><h2>Site Value</h2><p>Site value analysis tools will be added here. The shared dataset is already available to this page.</p></div>
+</section>
+</main>
+<script src="js/data-model.js"></script><script src="js/utils.js"></script><script src="js/csv-import.js"></script><script src="js/app.js"></script><script src="js/analyses/market.js"></script><script src="js/analyses/gla.js"></script><script src="js/components/date-picker.js"></script><script src="js/components/comp-remove.js"></script></body></html>
